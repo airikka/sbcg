@@ -1,0 +1,66 @@
+#!/bin/sh
+
+CONFIG_FILE=$(mktemp /tmp/sbgg.genconf.XXXXXXXXXX)
+DATA_FILE_IDEAL=$(mktemp /tmp/sbgg.datafile.XXXXXXXXXX)
+DATA_FILE_ACTUAL=$(mktemp /tmp/sbgg.datafile.XXXXXXXXXX)
+RESULT_FILE=$(mktemp /tmp/sbgg.result.XXXXXXXXXX.png)
+
+#Defaults
+TITLE="Burndown"
+OUTPUT_TYPE="png enhanced"
+
+usage()
+{
+	echo "--blipp"
+}
+
+while [ -n "$1" ]; do
+	case "$1" in
+
+		"--title")	shift
+				TITLE=$1
+				shift
+		     		;;
+		"--type")	shift
+				OUTPUT_TYPE=$1
+				;;
+
+		*) 		usage
+		   		exit 42
+		   		;;
+	esac
+done
+
+generate_config_file()
+{
+	echo "set title \"$TITLE\"" >> $CONFIG_FILE
+	echo "set term $OUTPUT_TYPE" >> $CONFIG_FILE
+	echo "set output \"$RESULT_FILE\"" >> $CONFIG_FILE
+	echo "set xdata time" >> $CONFIG_FILE
+	echo "set timefmt \"%Y-%m-%d\"" >> $CONFIG_FILE
+	echo "set format x \"%Y-%m-%d\"" >> $CONFIG_FILE
+	echo "set xtics rotate" >> $CONFIG_FILE
+	echo "set grid xtics ytics" >> $CONFIG_FILE
+	echo "plot \"$DATA_FILE_IDEAL\" using 1:2 with lines title \"Ideal\"" >> $CONFIG_FILE
+
+}
+
+generate_data_files()
+{
+	cp my.data $DATA_FILE_IDEAL
+}
+
+cleanup()
+{
+	rm $CONFIG_FILE $DATA_FILE_IDEAL $DATA_FILE_ACTUAL $RESULT_FILE
+}
+
+main()
+{
+	generate_config_file
+	generate_data_files
+	gnuplot $CONFIG_FILE
+#	cleanup
+}
+
+main
