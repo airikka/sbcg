@@ -1,13 +1,20 @@
-#!/bin/sh
+#!/bin/bash
 
 CONFIG_FILE=$(mktemp /tmp/sbgg.genconf.XXXXXXXXXX)
 DATA_FILE_IDEAL=$(mktemp /tmp/sbgg.datafile.XXXXXXXXXX)
 DATA_FILE_ACTUAL=$(mktemp /tmp/sbgg.datafile.XXXXXXXXXX)
-RESULT_FILE=$(mktemp /tmp/sbgg.result.XXXXXXXXXX.png)
+RESULT_FILE=$(mktemp /tmp/sbgg.result.XXXXXXXXXX)
 
 #Defaults
+LANG="se"
 TITLE="Burndown"
-OUTPUT_TYPE="png enhanced"
+OUTPUT_TYPE="pdf enhanced"
+OUTPUT="stdout"
+DAYS=20
+ACTDAYS=0
+HOURS=500
+START_DATE="2013-01-01"
+WITH_HD_WE="yes"
 
 usage()
 {
@@ -18,13 +25,53 @@ while [ -n "$1" ]; do
 	case "$1" in
 
 		"--title")	shift
-				TITLE=$1
-				shift
+				if [ ! x"${1:0:2}" = x"--" ]; then
+					TITLE=$1
+					shift
+				fi
 		     		;;
 		"--type")	shift
-				OUTPUT_TYPE=$1
+				if [ ! x"${1:0:2}" = x"--" ]; then
+					OUTPUT_TYPE=$1
+					shift
+				fi
 				;;
-
+		"--work-days")	shift
+				if [ ! x"${1:0:2}" = x"--" ]; then
+					DAYS=$1
+					shift
+				fi
+				;;
+		"--start-date")	shift
+				if [ ! x"${1:0:2}" = x"--" ]; then
+					START_DATE=$1
+					shift
+				fi
+				;;
+		"--hours")	shift
+				if [ ! x"${1:0:2}" = x"--" ]; then
+					HOURS=$1
+					shift
+				fi
+				;;
+		"--with-hd-we")	shift
+				if [ ! x"${1:0:2}" = x"--" ]; then
+					WITH_HD_WE=$1
+					shift
+				fi
+				;;
+		"--lang")	shift
+				if [ ! x"${1:0:2}" = x"--" ]; then
+					LANG=$1
+					shift
+				fi
+				;;
+		"--output")	shift
+				if [ ! x"${1:0:2}" = x"--" ]; then
+					OUTPUT=$1
+					shift
+				fi
+				;;
 		*) 		usage
 		   		exit 42
 		   		;;
@@ -33,21 +80,68 @@ done
 
 generate_config_file()
 {
+	END_DATE=$(date -d "$START_DATE + $ACTDAYS days" +"%Y-%m-%d")
+
 	echo "set title \"$TITLE\"" >> $CONFIG_FILE
 	echo "set term $OUTPUT_TYPE" >> $CONFIG_FILE
 	echo "set output \"$RESULT_FILE\"" >> $CONFIG_FILE
-	echo "set xdata time" >> $CONFIG_FILE
 	echo "set timefmt \"%Y-%m-%d\"" >> $CONFIG_FILE
 	echo "set format x \"%Y-%m-%d\"" >> $CONFIG_FILE
-	echo "set xtics rotate" >> $CONFIG_FILE
+	echo "set xtics rotate by -90 scale 0 font \".6\"" >> $CONFIG_FILE
+	echo "set bmargin 6" >> $CONFIG_FILE
 	echo "set grid xtics ytics" >> $CONFIG_FILE
-	echo "plot \"$DATA_FILE_IDEAL\" using 1:2 with lines title \"Ideal\"" >> $CONFIG_FILE
+	echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal\"" >> $CONFIG_FILE
 
+}
+
+calc_actual_days()
+{
+	COUNTER_HD_WE=0;
+	COUNTUP=0
+	LOOPNR=0
+
+	while [ $COUNTUP -lt $DAYS ]; do
+		CURDATE=$(date -d "$START_DATE + $LOOPNR days" +"%Y-%m-%d") 
+		CURYR=$(date -d "$CURDATE" +"%Y")
+		CURWDN=$(date -d "$CURDATE" +"%a")
+		CURHOL=$(cat holidays/${LANG}/${CURYR} | grep $CURDATE)
+		if [ x"$CURWDN" = x"Sat" -o x"$CURWDN" = x"Sun" -o -n "$CURHOL" ]; then
+			COUNTER_HD_WE_tmp=$(expr $COUNTER_HD_WE + 1)
+			COUNTER_HD_WE=$COUNTER_HD_WE_tmp
+			LOOPNR_tmp=$(expr $LOOPNR + 1)
+			LOOPNR=$LOOPNR_tmp
+		else
+			COUNTUP_tmp=$(expr $COUNTUP + 1)
+			COUNTUP=$COUNTUP_tmp
+			LOOPNR_tmp=$(expr $LOOPNR + 1)
+			LOOPNR=$LOOPNR_tmp
+		fi
+	done
+
+	echo $(expr $DAYS + $COUNTER_HD_WE)
 }
 
 generate_data_files()
 {
-	cp my.data $DATA_FILE_IDEAL
+
+	PREHOUR=$HOURS
+
+	for d in $(seq 0 $(expr $ACTDAYS - 1)); do
+		CURDATE=$(date -d "$START_DATE + $d days" +"%Y-%m-%d") 
+		CURHOUR=$(echo "scale=2; $PREHOUR - ($HOURS / $DAYS)"| bc) 
+		CURWDN=$(date -d "$CURDATE" +"%a")
+		CURYR=$(date -d "$CURDATE" +"%Y")
+		CURHOL=$(cat holidays/${LANG}/${CURYR} | grep $CURDATE)
+
+		if [ x"$CURWDN" = x"Sat" -o x"$CURWDN" = x"Sun" -o -n "$CURHOL" ]; then
+			if [ x"$WITH_HD_WE" = x"yes" ]; then
+				echo $CURDATE $PREHOUR >> $DATA_FILE_IDEAL
+			fi
+		else
+			echo $CURDATE $CURHOUR >> $DATA_FILE_IDEAL
+			PREHOUR=$CURHOUR
+		fi
+	done
 }
 
 cleanup()
@@ -57,10 +151,18 @@ cleanup()
 
 main()
 {
+	ACTDAYS=$(calc_actual_days)
 	generate_config_file
 	generate_data_files
 	gnuplot $CONFIG_FILE
-#	cleanup
+
+	if [ x"$OUTPUT" = x"stdout" ]; then
+		cat $RESULT_FILE
+	else
+		cp $RESULT_FILE $OUTPUT
+	fi
+
+	cleanup
 }
 
 main
