@@ -9,76 +9,96 @@ RESULT_FILE=$(mktemp /tmp/sbgg.result.XXXXXXXXXX)
 LANG="se"
 TITLE="Burndown"
 OUTPUT_TYPE="pdf enhanced"
-OUTPUT="stdout"
+OUTPUT="stdout-graph"
 DAYS=20
 ACTDAYS=0
 HOURS=500
 START_DATE="2013-01-01"
 WITH_HD_WE="yes"
+ACTUAL=""
+CONFIG=""
 
 usage()
 {
 	echo "--blipp"
 }
 
-while [ -n "$1" ]; do
-	case "$1" in
+parse_config()
+{
+	for d in LANG TITLE OUTPUT_TYPE OUTPUT DAYS HOURS START_DATE WITH_HD_WE ACTUAL; do
+		temp=$(cat $CONFIG | grep "^$d=" | sed 's/^.*=//')
+		eval $d="$temp"
+	done
+}
 
-		"--title")	shift
+parse_arguments()
+{
+	while [ -n "$1" ]; do
+		case "$1" in
+
+			"--title")	shift
 				if [ ! x"${1:0:2}" = x"--" ]; then
 					TITLE=$1
 					shift
 				fi
-		     		;;
-		"--type")	shift
+				;;
+			"--type")	shift
 				if [ ! x"${1:0:2}" = x"--" ]; then
 					OUTPUT_TYPE=$1
 					shift
 				fi
 				;;
-		"--work-days")	shift
+			"--work-days")	shift
 				if [ ! x"${1:0:2}" = x"--" ]; then
 					DAYS=$1
 					shift
 				fi
 				;;
-		"--start-date")	shift
+			"--start-date")	shift
 				if [ ! x"${1:0:2}" = x"--" ]; then
 					START_DATE=$1
 					shift
 				fi
 				;;
-		"--hours")	shift
+			"--hours")	shift
 				if [ ! x"${1:0:2}" = x"--" ]; then
 					HOURS=$1
 					shift
 				fi
 				;;
-		"--with-hd-we")	shift
+			"--with-hd-we")	shift
 				if [ ! x"${1:0:2}" = x"--" ]; then
 					WITH_HD_WE=$1
 					shift
 				fi
 				;;
-		"--lang")	shift
+			"--lang")	shift
 				if [ ! x"${1:0:2}" = x"--" ]; then
 					LANG=$1
 					shift
 				fi
 				;;
-		"--output")	shift
+			"--output")	shift
 				if [ ! x"${1:0:2}" = x"--" ]; then
 					OUTPUT=$1
 					shift
 				fi
 				;;
-		*) 		usage
-		   		exit 42
-		   		;;
-	esac
-done
+			"--config")	shift
+				if [ ! x"${1:0:2}" = x"--" ]; then
+					CONFIG=$1
+					shift
+				fi
+				;;
+			*) 		usage
+				exit 42
+				;;
+		esac
+	done
+}
 
-generate_config_file()
+
+generate_gnuplot_config_file()
 {
 	END_DATE=$(date -d "$START_DATE + $ACTDAYS days" +"%Y-%m-%d")
 
@@ -90,7 +110,12 @@ generate_config_file()
 	echo "set xtics rotate by -90 scale 0 font \".6\"" >> $CONFIG_FILE
 	echo "set bmargin 6" >> $CONFIG_FILE
 	echo "set grid xtics ytics" >> $CONFIG_FILE
-	echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal\"" >> $CONFIG_FILE
+	if [ -n "$ACTUAL" ]; then
+		echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal\", \
+			\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with lines title \"Actual\"" >> $CONFIG_FILE
+	else
+		echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal\"" >> $CONFIG_FILE
+	fi
 
 }
 
@@ -127,6 +152,7 @@ generate_data_files()
 	PREHOUR=$HOURS
 
 	for d in $(seq 0 $(expr $ACTDAYS - 1)); do
+		d_plus_one=$(expr $d + 1)
 		CURDATE=$(date -d "$START_DATE + $d days" +"%Y-%m-%d") 
 		CURHOUR=$(echo "scale=2; $PREHOUR - ($HOURS / $DAYS)"| bc) 
 		CURWDN=$(date -d "$CURDATE" +"%a")
@@ -136,9 +162,11 @@ generate_data_files()
 		if [ x"$CURWDN" = x"Sat" -o x"$CURWDN" = x"Sun" -o -n "$CURHOL" ]; then
 			if [ x"$WITH_HD_WE" = x"yes" ]; then
 				echo $CURDATE $PREHOUR >> $DATA_FILE_IDEAL
+				echo $CURDATE $(echo $ACTUAL | awk "{print \$$d_plus_one}") >> $DATA_FILE_ACTUAL
 			fi
 		else
 			echo $CURDATE $CURHOUR >> $DATA_FILE_IDEAL
+			echo $CURDATE $(echo $ACTUAL | awk "{print \$$d_plus_one}") >> $DATA_FILE_ACTUAL
 			PREHOUR=$CURHOUR
 		fi
 	done
@@ -146,17 +174,36 @@ generate_data_files()
 
 cleanup()
 {
-	rm $CONFIG_FILE $DATA_FILE_IDEAL $DATA_FILE_ACTUAL $RESULT_FILE
+#	rm $CONFIG_FILE $DATA_FILE_IDEAL $DATA_FILE_ACTUAL $RESULT_FILE
+	rm $CONFIG_FILE $DATA_FILE_IDEAL $RESULT_FILE
+}
+
+generate_config()
+{
+	echo "LANG=\"$LANG\"" >> $RESULT_FILE
+	echo "TITLE=\"$TITLE\"" >> $RESULT_FILE
+	echo "OUTPUT_TYPE=\"$OUTPUT_TYPE\"" >> $RESULT_FILE
+	echo "OUTPUT=\"$OUTPUT\"" >> $RESULT_FILE
+	echo "DAYS=\"$DAYS\"" >> $RESULT_FILE
+	echo "HOURS=\"$HOURS\"" >> $RESULT_FILE
+	echo "START_DATE=\"$START_DATE\"" >> $RESULT_FILE
+	echo "WITH_HD_WE=\"$WITH_HD_WE\"" >> $RESULT_FILE
+	echo "#ACTUAL=\"98 76 43 32 19 11\"" >> $RESULT_FILE
 }
 
 main()
 {
 	ACTDAYS=$(calc_actual_days)
-	generate_config_file
-	generate_data_files
-	gnuplot $CONFIG_FILE
 
-	if [ x"$OUTPUT" = x"stdout" ]; then
+	if [ x"$OUTPUT" = x"stdout-config" ]; then
+		generate_config
+	else
+		generate_gnuplot_config_file
+		generate_data_files
+		gnuplot $CONFIG_FILE
+	fi
+
+	if [ x"$OUTPUT" = x"stdout-graph" -o x"$OUTPUT" = x"stdout-config" ]; then
 		cat $RESULT_FILE
 	else
 		cp $RESULT_FILE $OUTPUT
@@ -164,5 +211,13 @@ main()
 
 	cleanup
 }
+
+parse_arguments $*
+
+if [ -n "$CONFIG" ]; then
+	parse_config
+	#Parse arguments again, since we want them to override config file
+	parse_arguments $*
+fi
 
 main
