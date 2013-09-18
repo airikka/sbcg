@@ -7,7 +7,7 @@ Title: <input type="text" name="title"><br>
 Work days: <input type="text" name="days"><br>
 Start date: <input type="text" name="date"><br>
 Hours: <input type="text" name="hours"><br>
-Show weekends/holidays: <input type="radio" name="we" value="yes" checked>Yes <input type="radio" name="we" value="no">No<br><br>
+Show weekends/holidays: <input type="radio" name="we" value="yes">Yes <input type="radio" name="we" value="no">No<br><br>
 Config file:<br>
 <input type="file" name="file" id="file"><br><br>
 <input type="submit" name="graph_button" value="Generate graph">
