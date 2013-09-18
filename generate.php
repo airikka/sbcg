@@ -14,7 +14,7 @@ header("Content-Disposition: attachment; filename=burndown-".date('Y-m-d-h-i-s')
 passthru("./generate --output stdout-graph --start-date $date --work-days $days --hours $hours --with-hd-we $we --title $title --config $configfile");
 } else {
 header("Content-type: text/plain");
-header("Content-Disposition: attachment; filename=burndown-config".date('Y-m-d-h-i-s').".txt");
+header("Content-Disposition: attachment; filename=burndown-config-".date('Y-m-d-h-i-s').".txt");
 passthru("./generate --output stdout-config --start-date $date --work-days $days --hours $hours --with-hd-we $we --title $title --config $configfile");
 }
 
