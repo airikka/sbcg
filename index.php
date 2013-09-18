@@ -13,5 +13,7 @@ Config file:<br>
 <input type="submit" name="graph_button" value="Generate graph">
 <input type="submit" name="config_button" value="Generate config file">
 </form>
-<body>
+<br><br><br><br>
+Get the source code <a href="https://github.com/airikka/sbgg">here</a>
+</body>
 </html>
