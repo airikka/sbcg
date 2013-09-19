@@ -203,6 +203,7 @@ generate_config()
 	if [ -n "$ACTUAL" ]; then
 		echo "ACTUAL=\"$ACTUAL\"" >> $RESULT_FILE
 	else
+		echo "#Remove the hash and insert correct values into the space separated list below" >> $RESULT_FILE
 		echo "#ACTUAL=\"98 76 43 32 19 11\"" >> $RESULT_FILE
 	fi
 }
