@@ -188,7 +188,11 @@ generate_config()
 	echo "HOURS=\"$HOURS\"" >> $RESULT_FILE
 	echo "START_DATE=\"$START_DATE\"" >> $RESULT_FILE
 	echo "WITH_HD_WE=\"$WITH_HD_WE\"" >> $RESULT_FILE
-	echo "#ACTUAL=\"98 76 43 32 19 11\"" >> $RESULT_FILE
+	if [ -n "$ACTUAL" ]; then
+		echo "ACTUAL=\"$ACTUAL\"" >> $RESULT_FILE
+	else
+		echo "#ACTUAL=\"98 76 43 32 19 11\"" >> $RESULT_FILE
+	fi
 }
 
 main()
