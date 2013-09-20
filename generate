@@ -38,14 +38,22 @@ parse_arguments()
 
 			"--title")	shift
 				if [ ! x"${1:0:2}" = x"--" ]; then
-					TITLE=$1
-					shift
+					TITLE=""
+					while [ -n "$1" -a ! x"${1:0:2}" = x"--" ]; do
+						TITLE_tmp=$(echo $TITLE $1)
+						TITLE=$TITLE_tmp
+						shift
+					done
 				fi
 				;;
 			"--type")	shift
 				if [ ! x"${1:0:2}" = x"--" ]; then
-					OUTPUT_TYPE=$1
-					shift
+					OUTPUT_TYPE=""
+					while [ -n "$1" -a ! x"${1:0:2}" = x"--" ]; do
+						OUTPUT_TYPE_tmp=$(echo $OUTPUT_TYPE $1)
+						OUTPUT_TYPE=$OUTPUT_TYPE_tmp
+						shift
+					done
 				fi
 				;;
 			"--work-days")	shift
