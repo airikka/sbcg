@@ -26,7 +26,7 @@ usage()
 parse_config()
 {
 	for d in LANG TITLE OUTPUT_TYPE OUTPUT DAYS HOURS START_DATE WITH_HD_WE ACTUAL; do
-		temp=$(cat $CONFIG | grep "^$d=" | sed 's/^.*=//')
+		temp=$(cat $CONFIG | grep "^$d=" | sed -e 's/^.*=//' -e 's/\r//')
 		eval $d="$temp"
 	done
 }
@@ -192,19 +192,19 @@ cleanup()
 
 generate_config()
 {
-	echo "LANG=\"$LANG\"" >> $RESULT_FILE
-	echo "TITLE=\"$TITLE\"" >> $RESULT_FILE
-	echo "OUTPUT_TYPE=\"$OUTPUT_TYPE\"" >> $RESULT_FILE
-	echo "OUTPUT=\"$OUTPUT\"" >> $RESULT_FILE
-	echo "DAYS=\"$DAYS\"" >> $RESULT_FILE
-	echo "HOURS=\"$HOURS\"" >> $RESULT_FILE
-	echo "START_DATE=\"$START_DATE\"" >> $RESULT_FILE
-	echo "WITH_HD_WE=\"$WITH_HD_WE\"" >> $RESULT_FILE
+	echo -ne "LANG=\"$LANG\"\r\n" >> $RESULT_FILE
+	echo -ne "TITLE=\"$TITLE\"\r\n" >> $RESULT_FILE
+	echo -ne "OUTPUT_TYPE=\"$OUTPUT_TYPE\"\r\n" >> $RESULT_FILE
+	echo -ne "OUTPUT=\"$OUTPUT\"\r\n" >> $RESULT_FILE
+	echo -ne "DAYS=\"$DAYS\"\r\n" >> $RESULT_FILE
+	echo -ne "HOURS=\"$HOURS\"\r\n" >> $RESULT_FILE
+	echo -ne "START_DATE=\"$START_DATE\"\r\n" >> $RESULT_FILE
+	echo -ne "WITH_HD_WE=\"$WITH_HD_WE\"\r\n" >> $RESULT_FILE
 	if [ -n "$ACTUAL" ]; then
-		echo "ACTUAL=\"$ACTUAL\"" >> $RESULT_FILE
+		echo -ne "ACTUAL=\"$ACTUAL\"\r\n" >> $RESULT_FILE
 	else
-		echo "#Remove the hash and insert correct values into the space separated list below" >> $RESULT_FILE
-		echo "#ACTUAL=\"98 76 43 32 19 11\"" >> $RESULT_FILE
+		echo -ne "#Remove the hash and insert correct values into the space separated list below\r\n" >> $RESULT_FILE
+		echo -ne "#ACTUAL=\"98 76 43 32 19 11\"\r\n" >> $RESULT_FILE
 	fi
 }
 
