@@ -126,9 +126,9 @@ generate_gnuplot_config_file()
 			xval=$(echo $d | awk '{print $1}')
 			yval=$(echo $d | awk '{print $2}')
 			if [ -n "$yval" -a -n "$xval" ]; then
+				echo "set label \"$yval\" at $linecounter,$yval font \",5\" left front" >> $CONFIG_FILE
 				linecounter_tmp=$(expr $linecounter + 1)
 				linecounter=$linecounter_tmp
-				echo "set label \"$yval\" at $linecounter,$yval font \",8\"" >> $CONFIG_FILE
 			fi
 		done < $DATA_FILE_ACTUAL
 
