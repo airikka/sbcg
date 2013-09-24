@@ -1,7 +1,7 @@
 <html>
-<title>Simpel Burndown Graph Generator</title>
+<title>Simple Burndown Graph Generator</title>
 <body>
-<h2>Simpel Burndown Graph Generator</h2><br>
+<h2>Simple Burndown Graph Generator</h2><br>
 <form action="generate.php" method="post" enctype="multipart/form-data">
 Title: <input type="text" name="title"><br>
 Work days:
@@ -41,9 +41,9 @@ Config file:<br>
 </form>
 <br><br><br>
 <code>
-Simpel howto:<br><br>
-There are two ways of using Simpel Burndown Graph Generator.<br><br>
-1. If just a simpel burndown graph with "Ideal" line is needed, just enter values and push "Generate graph" button<br><br>
+Simple howto:<br><br>
+There are two ways of using Simple Burndown Graph Generator.<br><br>
+1. If just a simple burndown graph with "Ideal" line is needed, just enter values and push "Generate graph" button<br><br>
 2. If an "Actual" line is needed:<br>
 <ul>
 <li> Enter starting values
