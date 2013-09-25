@@ -172,9 +172,9 @@ generate_data_files()
 {
 
 	PREHOUR=$HOURS
+	d_plus_one=0
 
 	for d in $(seq 0 $(expr $ACTDAYS - 1)); do
-		d_plus_one=$(expr $d + 1)
 		CURDATE=$(date -d "$START_DATE + $d days" +"%Y-%m-%d") 
 		CURHOUR=$(echo "scale=2; $PREHOUR - ($HOURS / $DAYS)"| bc) 
 		CURWDN=$(date -d "$CURDATE" +"%a")
@@ -183,10 +183,14 @@ generate_data_files()
 
 		if [ x"$CURWDN" = x"Sat" -o x"$CURWDN" = x"Sun" -o -n "$CURHOL" ]; then
 			if [ x"$WITH_HD_WE" = x"yes" ]; then
+				d_plus_one_tmp=$(expr $d_plus_one + 1)
+				d_plus_one=$d_plus_one_tmp
 				echo $CURDATE $PREHOUR >> $DATA_FILE_IDEAL
 				echo $CURDATE $(echo $ACTUAL | awk "{print \$$d_plus_one}") >> $DATA_FILE_ACTUAL
 			fi
 		else
+			d_plus_one_tmp=$(expr $d_plus_one + 1)
+			d_plus_one=$d_plus_one_tmp
 			echo $CURDATE $CURHOUR >> $DATA_FILE_IDEAL
 			echo $CURDATE $(echo $ACTUAL | awk "{print \$$d_plus_one}") >> $DATA_FILE_ACTUAL
 			PREHOUR=$CURHOUR
