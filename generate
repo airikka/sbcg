@@ -121,7 +121,7 @@ generate_gnuplot_config_file()
 	echo "set rmargin 6" >> $CONFIG_FILE
 	echo "set bmargin 4" >> $CONFIG_FILE
 	echo "set grid xtics ytics" >> $CONFIG_FILE
-	echo "set key font \",6\"" >> $CONFIG_FILE
+	echo "set key font \",6\" width -25" >> $CONFIG_FILE
 
 	if [ -n "$ACTUAL" ]; then
 
