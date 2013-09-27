@@ -17,6 +17,8 @@ START_DATE="2013-01-01"
 WITH_HD_WE="yes"
 ACTUAL=""
 CONFIG=""
+DELTA=0
+DELTA_REM=0
 
 usage()
 {
@@ -119,6 +121,7 @@ generate_gnuplot_config_file()
 	echo "set rmargin 6" >> $CONFIG_FILE
 	echo "set bmargin 4" >> $CONFIG_FILE
 	echo "set grid xtics ytics" >> $CONFIG_FILE
+	echo "set key font \",6\"" >> $CONFIG_FILE
 
 	if [ -n "$ACTUAL" ]; then
 
@@ -133,10 +136,10 @@ generate_gnuplot_config_file()
 			fi
 		done < $DATA_FILE_ACTUAL
 
-		echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal\", \
-			\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual\"" >> $CONFIG_FILE
+		echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Delta: $DELTA hours/day)\", \
+			\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual (Remaining delta: $DELTA_REM hours/day)\"" >> $CONFIG_FILE
 	else
-		echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal\"" >> $CONFIG_FILE
+		echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Delta: $DELTA hours/day)\"" >> $CONFIG_FILE
 	fi
 
 }
@@ -175,6 +178,8 @@ generate_data_files()
 	weekdays_plus_one=0
 	CURHOUR=$HOURS
 	DELTA=$(echo "scale=2; $HOURS / $DAYS" | bc)
+	ACT_DAYS_REMAINING=0
+	LAST_ACTUAL=0
 
 	for d in $(seq 0 $(expr $ACTDAYS)); do
 		CURDATE=$(date -d "$START_DATE + $d days" +"%Y-%m-%d") 
@@ -196,10 +201,23 @@ generate_data_files()
 			weekdays_plus_one=$weekdays_plus_one_tmp
 
 			echo $CURDATE $CURHOUR >> $DATA_FILE_IDEAL
-			echo $CURDATE $(echo $ACTUAL | awk "{print \$$d_plus_one}") >> $DATA_FILE_ACTUAL
+			actual=$(echo $ACTUAL | awk "{print \$$d_plus_one}")
+			echo $CURDATE $actual >> $DATA_FILE_ACTUAL
 			CURHOUR=$(echo "scale=2; $HOURS - ($weekdays_plus_one * $DELTA)"| bc) 
+
+			if [ x"$actual" = x"" ]; then
+				ACT_DAYS_REMAINING_tmp=$(expr $ACT_DAYS_REMAINING + 1)
+				ACT_DAYS_REMAINING=$ACT_DAYS_REMAINING_tmp
+			else
+				LAST_ACTUAL=$actual
+			fi
 		fi
 	done
+
+	if [ -n "$ACTUAL" ]; then
+		DELTA_REM=$(echo "scale=2; $LAST_ACTUAL / $ACT_DAYS_REMAINING" | bc)
+	fi
+
 }
 
 cleanup()
