@@ -177,7 +177,7 @@ generate_data_files()
 	d_plus_one=0
 	weekdays_plus_one=0
 	CURHOUR=$HOURS
-	DELTA=$(echo "scale=2; $HOURS / $DAYS" | bc)
+	DELTA=$(echo "scale=1; $HOURS / $DAYS" | bc)
 	ACT_DAYS_REMAINING=0
 	LAST_ACTUAL=0
 
@@ -215,7 +215,7 @@ generate_data_files()
 	done
 
 	if [ -n "$ACTUAL" ]; then
-		DELTA_REM=$(echo "scale=2; $LAST_ACTUAL / $ACT_DAYS_REMAINING" | bc)
+		DELTA_REM=$(echo "scale=1; $LAST_ACTUAL / $ACT_DAYS_REMAINING" | bc)
 	fi
 
 }
