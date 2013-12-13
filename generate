@@ -3,6 +3,7 @@
 CONFIG_FILE=$(mktemp /tmp/sbgg.genconf.XXXXXXXXXX)
 DATA_FILE_IDEAL=$(mktemp /tmp/sbgg.datafile.XXXXXXXXXX)
 DATA_FILE_ACTUAL=$(mktemp /tmp/sbgg.datafile.XXXXXXXXXX)
+DATA_FILE_SCOPES=$(mktemp /tmp/sbgg.datafile.XXXXXXXXXX)
 RESULT_FILE=$(mktemp /tmp/sbgg.result.XXXXXXXXXX)
 
 #Defaults
@@ -19,6 +20,9 @@ ACTUAL=""
 CONFIG=""
 DELTA=0
 DELTA_REM=0
+SCOPES="false"
+SCOPESHOUR=0
+SCOPESPREVAL=""
 
 usage()
 {
@@ -136,8 +140,14 @@ generate_gnuplot_config_file()
 			fi
 		done < $DATA_FILE_ACTUAL
 
-		echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Delta: $DELTA hours/day)\", \
-			\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual (Remaining delta: $DELTA_REM hours/day)\"" >> $CONFIG_FILE
+		if [ x"$SCOPES" = x"false" ]; then
+			echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Delta: $DELTA hours/day)\", \
+				\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual (Remaining delta: $DELTA_REM hours/day)\"" >> $CONFIG_FILE
+		else
+			echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Delta: $DELTA hours/day)\", \
+				\"$DATA_FILE_SCOPES\" using 2:xticlabels(1) with lines title \"Scope in/out (Delta: $DELTA hours/day)\", \
+				\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual (Remaining delta: $DELTA_REM hours/day)\"" >> $CONFIG_FILE
+		fi
 	else
 		echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Delta: $DELTA hours/day)\"" >> $CONFIG_FILE
 	fi
@@ -171,6 +181,39 @@ calc_actual_days()
 	echo $(expr $DAYS + $COUNTER_HD_WE)
 }
 
+add_subtr_scopes_hours()
+{
+	actual=$1
+
+	echo $actual | grep -q "[0-9]\++[0-9]\+"
+	if [ $? -eq 0 ]; then
+		SCOPES="true"
+		diff=$(echo $actual | sed 's/\([+-]*[0-9]\+\)+\([0-9]\+\)/\2/')
+		SCOPESHOUR_tmp=$(expr $SCOPESHOUR + $diff)
+		SCOPESHOUR=$SCOPESHOUR_tmp
+	fi
+	echo $actual | grep -q "[0-9]\+-[0-9]\+"
+	if [ $? -eq 0 ]; then
+		SCOPES="true"
+		diff=$(echo $actual | sed 's/\([+-]*[0-9]\+\)-\([0-9]\+\)/\2/')
+		SCOPESHOUR_tmp=$(expr $SCOPESHOUR - $diff)
+		SCOPESHOUR=$SCOPESHOUR_tmp
+	fi
+
+}
+
+strip_scopes()
+{
+	actual=$1
+	echo $actual | grep -q "[0-9]\+[+-][0-9]\+"
+	if [ $? -eq 0 ]; then
+		actual_tmp=$(echo $actual | sed 's/\([+-]*[0-9]\+\)[+-]\([0-9]\+\)/\1/')
+		actual=$actual_tmp
+	fi
+
+	echo $actual
+}
+
 generate_data_files()
 {
 
@@ -192,7 +235,10 @@ generate_data_files()
 				d_plus_one_tmp=$(expr $d_plus_one + 1)
 				d_plus_one=$d_plus_one_tmp
 				echo $CURDATE $CURHOUR >> $DATA_FILE_IDEAL
-				echo $CURDATE $(echo $ACTUAL | awk "{print \$$d_plus_one}") >> $DATA_FILE_ACTUAL
+				add_subtr_scopes_hours $(echo $ACTUAL | awk "{print \$$d_plus_one}")
+				actual=$(strip_scopes $(echo $ACTUAL | awk "{print \$$d_plus_one}"))
+				echo $CURDATE $(echo "scale=2; $CURHOUR + $SCOPESHOUR" | bc) >> $DATA_FILE_SCOPES
+				echo $CURDATE $actual >> $DATA_FILE_ACTUAL
 			fi
 		else
 			d_plus_one_tmp=$(expr $d_plus_one + 1)
@@ -201,9 +247,11 @@ generate_data_files()
 			weekdays_plus_one=$weekdays_plus_one_tmp
 
 			echo $CURDATE $CURHOUR >> $DATA_FILE_IDEAL
-			actual=$(echo $ACTUAL | awk "{print \$$d_plus_one}")
+			add_subtr_scopes_hours $(echo $ACTUAL | awk "{print \$$d_plus_one}")
+			actual=$(strip_scopes $(echo $ACTUAL | awk "{print \$$d_plus_one}"))
+			echo $CURDATE $(echo "scale=2; $CURHOUR + $SCOPESHOUR" | bc) >> $DATA_FILE_SCOPES
 			echo $CURDATE $actual >> $DATA_FILE_ACTUAL
-			CURHOUR=$(echo "scale=2; $HOURS - ($weekdays_plus_one * $DELTA)"| bc) 
+			CURHOUR=$(echo "scale=2; $HOURS - ($weekdays_plus_one * $DELTA)" | bc) 
 
 			if [ x"$actual" = x"" ]; then
 				ACT_DAYS_REMAINING_tmp=$(expr $ACT_DAYS_REMAINING + 1)
@@ -215,14 +263,14 @@ generate_data_files()
 	done
 
 	if [ -n "$ACTUAL" ]; then
-		DELTA_REM=$(echo "scale=1; $LAST_ACTUAL / $ACT_DAYS_REMAINING" | bc)
+		DELTA_REM=$(echo "scale=1; ($LAST_ACTUAL / $ACT_DAYS_REMAINING) - ($SCOPESHOUR / $ACT_DAYS_REMAINING)" | bc)
 	fi
 
 }
 
 cleanup()
 {
-	rm $CONFIG_FILE $DATA_FILE_IDEAL $DATA_FILE_ACTUAL $RESULT_FILE
+	rm $CONFIG_FILE $DATA_FILE_IDEAL $DATA_FILE_ACTUAL $DATA_FILE_SCOPES $RESULT_FILE
 }
 
 generate_config()
