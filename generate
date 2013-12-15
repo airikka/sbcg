@@ -306,7 +306,9 @@ generate_config()
 	if [ -n "$ACTUAL" ]; then
 		echo -ne "ACTUAL=\"$ACTUAL\"\r\n" >> $RESULT_FILE
 	else
-		echo -ne "#Remove the hash and insert correct values into the space separated list below\r\n" >> $RESULT_FILE
+		echo -ne "#Remove the hash and insert correct values into the space separated list below.\r\n" >> $RESULT_FILE
+		echo -ne "#Use + or - if you have scoped in/out work. E.g. 43+30 means\r\n" >> $RESULT_FILE
+		echo -ne "#that 30 more hours of work is scoped in and 43 hours work is left to do.\r\n" >> $RESULT_FILE
 		echo -ne "#ACTUAL=\"98 76 43 32 19 11\"\r\n" >> $RESULT_FILE
 	fi
 }
