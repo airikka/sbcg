@@ -223,6 +223,17 @@ generate_data_files()
 	DELTA=$(echo "scale=1; $HOURS / $DAYS" | bc)
 	ACT_DAYS_REMAINING=0
 	LAST_ACTUAL=0
+	LAST_SEQ_WD=0
+
+	for d in $(seq 0 $(expr $ACTDAYS)); do
+		CURDATE=$(date -d "$START_DATE + $d days" +"%Y-%m-%d") 
+		CURYR=$(date -d "$CURDATE" +"%Y")
+		CURWDN=$(date -d "$CURDATE" +"%a")
+		CURHOL=$(cat holidays/${LANG}/${CURYR} | grep $CURDATE)
+		if [ x"$CURWDN" != x"Sat" -a x"$CURWDN" != x"Sun" -a -z "$CURHOL" ]; then
+			LAST_SEQ_WD=$(expr $d + 1)
+		fi
+	done
 
 	for d in $(seq 0 $(expr $ACTDAYS)); do
 		CURDATE=$(date -d "$START_DATE + $d days" +"%Y-%m-%d") 
@@ -230,7 +241,16 @@ generate_data_files()
 		CURYR=$(date -d "$CURDATE" +"%Y")
 		CURHOL=$(cat holidays/${LANG}/${CURYR} | grep $CURDATE)
 
-		if [ x"$CURWDN" = x"Sat" -o x"$CURWDN" = x"Sun" -o -n "$CURHOL" ]; then
+		isholwe="no"
+
+		if [ $d -ne $LAST_SEQ_WD ]; then
+			if [ x"$CURWDN" = x"Sat" -o x"$CURWDN" = x"Sun" -o -n "$CURHOL" ]; then
+				isholwe="yes"
+			fi
+		fi
+
+
+		if [ x"$isholwe" = x"yes" ]; then
 			if [ x"$WITH_HD_WE" = x"yes" ]; then
 				d_plus_one_tmp=$(expr $d_plus_one + 1)
 				d_plus_one=$d_plus_one_tmp
