@@ -4,6 +4,8 @@ CONFIG_FILE=$(mktemp /tmp/sbgg.genconf.XXXXXXXXXX)
 DATA_FILE_IDEAL=$(mktemp /tmp/sbgg.datafile.XXXXXXXXXX)
 DATA_FILE_ACTUAL=$(mktemp /tmp/sbgg.datafile.XXXXXXXXXX)
 DATA_FILE_SCOPES=$(mktemp /tmp/sbgg.datafile.XXXXXXXXXX)
+DATA_FILE_SCOPES_DIFF=$(mktemp /tmp/sbgg.datafile.XXXXXXXXXX)
+DATA_FILE_SCOPES_DIFF_DOTS=$(mktemp /tmp/sbgg.datafile.XXXXXXXXXX)
 RESULT_FILE=$(mktemp /tmp/sbgg.result.XXXXXXXXXX)
 
 #Defaults
@@ -22,7 +24,6 @@ DELTA=0
 DELTA_REM=0
 SCOPES="false"
 SCOPESHOUR=0
-SCOPESPREVAL=""
 
 usage()
 {
@@ -141,12 +142,29 @@ generate_gnuplot_config_file()
 		done < $DATA_FILE_ACTUAL
 
 		if [ x"$SCOPES" = x"false" ]; then
-			echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Delta: $DELTA hours/day)\", \
-				\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual (Remaining delta: $DELTA_REM hours/day)\"" >> $CONFIG_FILE
+			echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal ($DELTA hours/day)\", \
+				\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual ($DELTA_REM hours/day remaining)\"" >> $CONFIG_FILE
 		else
-			echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Delta: $DELTA hours/day)\", \
-				\"$DATA_FILE_SCOPES\" using 2:xticlabels(1) with lines title \"Scope in/out (Delta: $DELTA hours/day)\", \
-				\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual (Remaining delta: $DELTA_REM hours/day)\"" >> $CONFIG_FILE
+			while read d; do
+				dval=$(echo $d | awk '{print $1}')
+				xval=$(echo $d | awk '{print $2}')
+				yval=$(echo $d | awk '{print $3}')
+				zval=$(echo $d | awk '{print $4}')
+				if [ -n "$xval" -a -n "$yval" -a -n "$zval" ]; then
+					res=$(echo "$yval < 0" | bc)
+					if [ $res -eq "1" ]; then
+						echo "set label \"$yval\" at $xval,$zval font \",6\" left front tc lt 4 offset 0.5" >> $CONFIG_FILE
+					else
+						echo "set label \"+$yval\" at $xval,$zval font \",6\" left front tc lt 4 offset 0.5" >> $CONFIG_FILE
+					fi
+				fi
+				echo "$dval $zval" >> $DATA_FILE_SCOPES_DIFF_DOTS
+			done < $DATA_FILE_SCOPES_DIFF
+
+			echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal ($DELTA hours/day)\", \
+				\"$DATA_FILE_SCOPES\" using 2:xticlabels(1) with lines title \"Scope in/out ($SCOPESHOUR hours scoped in/out)\", \
+				\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual ($DELTA_REM hours/day remaining)\", \
+				\"$DATA_FILE_SCOPES_DIFF_DOTS\" using 2:xticlabels(1) with points pt 7 ps 0.4 lc rgb \"green\" notitle" >> $CONFIG_FILE
 		fi
 	else
 		echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Delta: $DELTA hours/day)\"" >> $CONFIG_FILE
@@ -224,6 +242,7 @@ generate_data_files()
 	ACT_DAYS_REMAINING=0
 	LAST_ACTUAL=0
 	LAST_SEQ_WD=0
+	PREV_SCOPESHOUR=$SCOPESHOUR
 
 	for d in $(seq 0 $(expr $ACTDAYS)); do
 		CURDATE=$(date -d "$START_DATE + $d days" +"%Y-%m-%d") 
@@ -257,8 +276,14 @@ generate_data_files()
 				echo $CURDATE $CURHOUR >> $DATA_FILE_IDEAL
 				add_subtr_scopes_hours $(echo $ACTUAL | awk "{print \$$d_plus_one}")
 				actual=$(strip_scopes $(echo $ACTUAL | awk "{print \$$d_plus_one}"))
-				echo $CURDATE $(echo "scale=2; $CURHOUR + $SCOPESHOUR" | bc) >> $DATA_FILE_SCOPES
+				curhour=$(echo "scale=2; $CURHOUR + $SCOPESHOUR" | bc) 
+				echo $CURDATE $curhour >> $DATA_FILE_SCOPES
 				echo $CURDATE $actual >> $DATA_FILE_ACTUAL
+				if [ x"$SCOPESHOUR" != x"$PREV_SCOPESHOUR" ]; then
+					echo $CURDATE $(expr $d_plus_one - 1) $(echo "scale=2; $SCOPESHOUR - $PREV_SCOPESHOUR" | bc) $curhour >> $DATA_FILE_SCOPES_DIFF
+				else
+					echo $CURDATE >> $DATA_FILE_SCOPES_DIFF
+				fi
 			fi
 		else
 			d_plus_one_tmp=$(expr $d_plus_one + 1)
@@ -269,8 +294,15 @@ generate_data_files()
 			echo $CURDATE $CURHOUR >> $DATA_FILE_IDEAL
 			add_subtr_scopes_hours $(echo $ACTUAL | awk "{print \$$d_plus_one}")
 			actual=$(strip_scopes $(echo $ACTUAL | awk "{print \$$d_plus_one}"))
-			echo $CURDATE $(echo "scale=2; $CURHOUR + $SCOPESHOUR" | bc) >> $DATA_FILE_SCOPES
+			curhour=$(echo "scale=2; $CURHOUR + $SCOPESHOUR" | bc) 
+			echo $CURDATE $curhour >> $DATA_FILE_SCOPES
 			echo $CURDATE $actual >> $DATA_FILE_ACTUAL
+			if [ x"$SCOPESHOUR" != x"$PREV_SCOPESHOUR" ]; then
+				echo $CURDATE $(expr $d_plus_one - 1) $(echo "scale=2; $SCOPESHOUR - $PREV_SCOPESHOUR" | bc) $curhour >> $DATA_FILE_SCOPES_DIFF
+			else
+				echo $CURDATE >> $DATA_FILE_SCOPES_DIFF
+			fi
+
 			CURHOUR=$(echo "scale=2; $HOURS - ($weekdays_plus_one * $DELTA)" | bc) 
 
 			if [ x"$actual" = x"" ]; then
@@ -280,6 +312,8 @@ generate_data_files()
 				LAST_ACTUAL=$actual
 			fi
 		fi
+
+		PREV_SCOPESHOUR=$SCOPESHOUR
 	done
 
 	if [ -n "$ACTUAL" ]; then
@@ -290,7 +324,7 @@ generate_data_files()
 
 cleanup()
 {
-	rm $CONFIG_FILE $DATA_FILE_IDEAL $DATA_FILE_ACTUAL $DATA_FILE_SCOPES $RESULT_FILE
+	rm $CONFIG_FILE $DATA_FILE_IDEAL $DATA_FILE_ACTUAL $DATA_FILE_SCOPES $DATA_FILE_SCOPES_DIFF $DATA_FILE_SCOPES_DIFF_DOTS $RESULT_FILE
 }
 
 generate_config()
