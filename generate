@@ -1,18 +1,18 @@
 #!/bin/bash
 
-CONFIG_FILE=$(mktemp /tmp/sbgg.genconf.XXXXXXXXXX)
-DATA_FILE_IDEAL=$(mktemp /tmp/sbgg.datafile.XXXXXXXXXX)
-DATA_FILE_ACTUAL=$(mktemp /tmp/sbgg.datafile.XXXXXXXXXX)
-DATA_FILE_SCOPES=$(mktemp /tmp/sbgg.datafile.XXXXXXXXXX)
-DATA_FILE_SCOPES_DIFF=$(mktemp /tmp/sbgg.datafile.XXXXXXXXXX)
-DATA_FILE_SCOPES_DIFF_DOTS=$(mktemp /tmp/sbgg.datafile.XXXXXXXXXX)
-RESULT_FILE=$(mktemp /tmp/sbgg.result.XXXXXXXXXX)
+CONFIG_FILE=$(mktemp /tmp/sbcg.genconf.XXXXXXXXXX)
+DATA_FILE_IDEAL=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
+DATA_FILE_ACTUAL=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
+DATA_FILE_SCOPES=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
+DATA_FILE_SCOPES_DIFF=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
+DATA_FILE_SCOPES_DIFF_DOTS=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
+RESULT_FILE=$(mktemp /tmp/sbcg.result.XXXXXXXXXX)
 
 #Defaults
 LANG="se"
 TITLE="Burndown"
 OUTPUT_TYPE="pdf enhanced"
-OUTPUT="stdout-graph"
+OUTPUT="stdout-chart"
 DAYS=20
 ACTDAYS=0
 HOURS=500
@@ -359,7 +359,7 @@ main()
 		gnuplot $CONFIG_FILE
 	fi
 
-	if [ x"$OUTPUT" = x"stdout-graph" -o x"$OUTPUT" = x"stdout-config" ]; then
+	if [ x"$OUTPUT" = x"stdout-chart" -o x"$OUTPUT" = x"stdout-config" ]; then
 		cat $RESULT_FILE
 	else
 		cp $RESULT_FILE $OUTPUT
