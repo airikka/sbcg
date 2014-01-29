@@ -122,11 +122,11 @@ generate_gnuplot_config_file()
 	echo "set output \"$RESULT_FILE\"" >> $CONFIG_FILE
 	echo "set timefmt \"%Y-%m-%d\"" >> $CONFIG_FILE
 	echo "set format x \"%Y-%m-%d\"" >> $CONFIG_FILE
-	echo "set xtics rotate by -45 scale 0 font \",8\"" >> $CONFIG_FILE
+	echo "set xtics rotate by -45 scale 0 font \"Arial,4\"" >> $CONFIG_FILE
 	echo "set rmargin 6" >> $CONFIG_FILE
 	echo "set bmargin 4" >> $CONFIG_FILE
 	echo "set grid xtics ytics" >> $CONFIG_FILE
-	echo "set key font \",6\" width -25" >> $CONFIG_FILE
+	echo "set key font \"Arial,4\" width -25" >> $CONFIG_FILE
 
 	if [ -n "$ACTUAL" ]; then
 
@@ -135,7 +135,7 @@ generate_gnuplot_config_file()
 			xval=$(echo $d | awk '{print $1}')
 			yval=$(echo $d | awk '{print $2}')
 			if [ -n "$yval" -a -n "$xval" ]; then
-				echo "set label \"$yval\" at $linecounter,$yval font \",6\" left front offset 0.5" >> $CONFIG_FILE
+				echo "set label \"$yval\" at $linecounter,$yval font \"Arial,3\" left front offset 0.5" >> $CONFIG_FILE
 				linecounter_tmp=$(expr $linecounter + 1)
 				linecounter=$linecounter_tmp
 			fi
@@ -153,9 +153,9 @@ generate_gnuplot_config_file()
 				if [ -n "$xval" -a -n "$yval" -a -n "$zval" ]; then
 					res=$(echo "$yval < 0" | bc)
 					if [ $res -eq "1" ]; then
-						echo "set label \"$yval\" at $xval,$zval font \",6\" left front tc lt 4 offset 0.5" >> $CONFIG_FILE
+						echo "set label \"$yval\" at $xval,$zval font \"Arial,3\" left front tc lt 4 offset 0.5" >> $CONFIG_FILE
 					else
-						echo "set label \"+$yval\" at $xval,$zval font \",6\" left front tc lt 4 offset 0.5" >> $CONFIG_FILE
+						echo "set label \"+$yval\" at $xval,$zval font \"Arial,3\" left front tc lt 4 offset 0.5" >> $CONFIG_FILE
 					fi
 				fi
 				echo "$dval $zval" >> $DATA_FILE_SCOPES_DIFF_DOTS
