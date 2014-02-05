@@ -5,10 +5,11 @@
 <form action="generate.php" method="post" enctype="multipart/form-data">
 Title: <input type="text" name="title"><br>
 <select name="dayvel">
-<option value="work-days" selected="selected">Work days</option>
+<option value="notused" selected="selected">Work days/Velocity</option>
+<option value="work-days">Work days</option>
 <option value="velocity">Velocity (per day)</option>
 </select>:
-<select name="dayvelnumber">
+<select name="dayvelval">
 <option value="" selected="selected"> </option>
 <?php
 for ($i=1; $i<=100; $i++)
@@ -24,8 +25,8 @@ e.g
 <?php
 echo date('Y-m-d');
 ?><br>
-Hours:
-<select name="hours">
+Hours/Points:
+<select name="phval">
 <option value="" selected="selected"> </option>
 <?php
 for ($i=1; $i<=1000; $i++)
@@ -35,6 +36,11 @@ for ($i=1; $i<=1000; $i++)
 <?php
 }
 ?>
+</select>
+<select name="ph">
+<option value="" selected="selected">hours/points</option>
+<option value="hours">hours</option>
+<option value="points">points</option>
 </select><br>
 Show weekends/holidays: <input type="radio" name="we" value="yes">Yes <input type="radio" name="we" value="no">No<br><br>
 Config file:<br>

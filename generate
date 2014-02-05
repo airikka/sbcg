@@ -26,6 +26,7 @@ SCOPES="false"
 SCOPESHOUR=0
 USE_VEL="no"
 VELOCITY=25
+PH="hours"
 
 usage()
 {
@@ -34,7 +35,7 @@ usage()
 
 parse_config()
 {
-	for d in LANG TITLE OUTPUT_TYPE OUTPUT DAYS HOURS START_DATE WITH_HD_WE ACTUAL USE_VEL VELOCITY; do
+	for d in LANG TITLE OUTPUT_TYPE OUTPUT DAYS HOURS START_DATE WITH_HD_WE ACTUAL USE_VEL VELOCITY PH; do
 		temp=$(cat $CONFIG | grep "^$d=" | sed -e 's/^.*=//' -e 's/\r//')
 		if [ -n "$temp" ]; then
 			eval $d="$temp"
@@ -74,15 +75,26 @@ parse_arguments()
 					shift
 				fi
 				;;
+			"--notused")	shift
+				if [ ! x"${1:0:2}" = x"--" ]; then
+					shift
+				fi
+				;;
 			"--start-date")	shift
 				if [ ! x"${1:0:2}" = x"--" ]; then
 					START_DATE=$1
 					shift
 				fi
 				;;
-			"--hours")	shift
+			"--phval")	shift
 				if [ ! x"${1:0:2}" = x"--" ]; then
 					HOURS=$1
+					shift
+				fi
+				;;
+			"--ph")	shift
+				if [ ! x"${1:0:2}" = x"--" ]; then
+					PH=$1
 					shift
 				fi
 				;;
@@ -154,8 +166,8 @@ generate_gnuplot_config_file()
 		done < $DATA_FILE_ACTUAL
 
 		if [ x"$SCOPES" = x"false" ]; then
-			echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal ($DELTA hours/day)\", \
-				\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual ($DELTA_REM hours/day remaining)\"" >> $CONFIG_FILE
+			echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Velocity: $DELTA $PH/day)\", \
+				\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual (Velocity: $DELTA_REM $PH/day remaining)\"" >> $CONFIG_FILE
 		else
 			while read d; do
 				dval=$(echo $d | awk '{print $1}')
@@ -173,13 +185,13 @@ generate_gnuplot_config_file()
 				echo "$dval $zval" >> $DATA_FILE_SCOPES_DIFF_DOTS
 			done < $DATA_FILE_SCOPES_DIFF
 
-			echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal ($DELTA hours/day)\", \
+			echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Velocity: $DELTA $PH/day)\", \
 				\"$DATA_FILE_SCOPES\" using 2:xticlabels(1) with lines title \"Scope in/out ($SCOPESHOUR hours scoped in/out)\", \
-				\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual ($DELTA_REM hours/day remaining)\", \
+				\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual (Velocity: $DELTA_REM $PH/day remaining)\", \
 				\"$DATA_FILE_SCOPES_DIFF_DOTS\" using 2:xticlabels(1) with points pt 7 ps 0.4 lc rgb \"green\" notitle" >> $CONFIG_FILE
 		fi
 	else
-		echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Delta: $DELTA hours/day)\"" >> $CONFIG_FILE
+		echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Velocity: $DELTA $PH/day)\"" >> $CONFIG_FILE
 	fi
 
 }
@@ -346,11 +358,13 @@ generate_config()
 	echo -ne "OUTPUT_TYPE=\"$OUTPUT_TYPE\"\r\n" >> $RESULT_FILE
 	echo -ne "OUTPUT=\"$OUTPUT\"\r\n" >> $RESULT_FILE
 	echo -ne "DAYS=\"$DAYS\"\r\n" >> $RESULT_FILE
+	echo -ne "#HOURS is also used for points\r\n" >> $RESULT_FILE
 	echo -ne "HOURS=\"$HOURS\"\r\n" >> $RESULT_FILE
 	echo -ne "START_DATE=\"$START_DATE\"\r\n" >> $RESULT_FILE
 	echo -ne "WITH_HD_WE=\"$WITH_HD_WE\"\r\n" >> $RESULT_FILE
 	echo -ne "USE_VEL=\"$USE_VEL\"\r\n" >> $RESULT_FILE
 	echo -ne "VELOCITY=\"$VELOCITY\"\r\n" >> $RESULT_FILE
+	echo -ne "PH=\"$PH\"\r\n" >> $RESULT_FILE
 	if [ -n "$ACTUAL" ]; then
 		echo -ne "ACTUAL=\"$ACTUAL\"\r\n" >> $RESULT_FILE
 	else
