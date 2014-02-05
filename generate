@@ -24,6 +24,8 @@ DELTA=0
 DELTA_REM=0
 SCOPES="false"
 SCOPESHOUR=0
+USE_VEL="no"
+VELOCITY=25
 
 usage()
 {
@@ -32,9 +34,12 @@ usage()
 
 parse_config()
 {
-	for d in LANG TITLE OUTPUT_TYPE OUTPUT DAYS HOURS START_DATE WITH_HD_WE ACTUAL; do
+	for d in LANG TITLE OUTPUT_TYPE OUTPUT DAYS HOURS START_DATE WITH_HD_WE ACTUAL USE_VEL VELOCITY; do
 		temp=$(cat $CONFIG | grep "^$d=" | sed -e 's/^.*=//' -e 's/\r//')
-		eval $d="$temp"
+		if [ -n "$temp" ]; then
+			eval $d="$temp"
+		fi
+
 	done
 }
 
@@ -78,6 +83,13 @@ parse_arguments()
 			"--hours")	shift
 				if [ ! x"${1:0:2}" = x"--" ]; then
 					HOURS=$1
+					shift
+				fi
+				;;
+			"--velocity")	shift
+				if [ ! x"${1:0:2}" = x"--" ]; then
+					VELOCITY=$1
+					USE_VEL="yes"
 					shift
 				fi
 				;;
@@ -337,6 +349,8 @@ generate_config()
 	echo -ne "HOURS=\"$HOURS\"\r\n" >> $RESULT_FILE
 	echo -ne "START_DATE=\"$START_DATE\"\r\n" >> $RESULT_FILE
 	echo -ne "WITH_HD_WE=\"$WITH_HD_WE\"\r\n" >> $RESULT_FILE
+	echo -ne "USE_VEL=\"$USE_VEL\"\r\n" >> $RESULT_FILE
+	echo -ne "VELOCITY=\"$VELOCITY\"\r\n" >> $RESULT_FILE
 	if [ -n "$ACTUAL" ]; then
 		echo -ne "ACTUAL=\"$ACTUAL\"\r\n" >> $RESULT_FILE
 	else
@@ -349,6 +363,10 @@ generate_config()
 
 main()
 {
+	if [ x"$USE_VEL" = x"yes" ]; then
+		DAYS=$(echo "scale=1; $HOURS / $VELOCITY" | bc | xargs printf "%1.0f\n")
+	fi
+
 	ACTDAYS=$(calc_actual_days)
 
 	if [ x"$OUTPUT" = x"stdout-config" ]; then

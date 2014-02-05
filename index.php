@@ -4,11 +4,14 @@
 <h2>Simple Burndown Chart Generator</h2><br>
 <form action="generate.php" method="post" enctype="multipart/form-data">
 Title: <input type="text" name="title"><br>
-Work days:
-<select name="days">
+<select name="dayvel">
+<option value="work-days" selected="selected">Work days</option>
+<option value="velocity">Velocity (per day)</option>
+</select>:
+<select name="dayvelnumber">
 <option value="" selected="selected"> </option>
 <?php
-for ($i=1; $i<=30; $i++)
+for ($i=1; $i<=100; $i++)
 {
 ?>
 <option value="<?php echo $i;?>"><?php echo $i;?></option>
