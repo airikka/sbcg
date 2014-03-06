@@ -167,7 +167,7 @@ generate_gnuplot_config_file()
 
 		if [ x"$SCOPES" = x"false" ]; then
 			echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Velocity: $DELTA $PH/day)\", \
-				\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual (Velocity: $DELTA_REM $PH/day remaining)\"" >> $CONFIG_FILE
+				\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual ($DELTA_REM $PH/day remaining)\"" >> $CONFIG_FILE
 		else
 			while read d; do
 				dval=$(echo $d | awk '{print $1}')
@@ -187,7 +187,7 @@ generate_gnuplot_config_file()
 
 			echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Velocity: $DELTA $PH/day)\", \
 				\"$DATA_FILE_SCOPES\" using 2:xticlabels(1) with lines title \"Scope in/out ($SCOPESHOUR hours scoped in/out)\", \
-				\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual (Velocity: $DELTA_REM $PH/day remaining)\", \
+				\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual ($DELTA_REM $PH/day remaining)\", \
 				\"$DATA_FILE_SCOPES_DIFF_DOTS\" using 2:xticlabels(1) with points pt 7 ps 0.4 lc rgb \"green\" notitle" >> $CONFIG_FILE
 		fi
 	else
