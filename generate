@@ -8,6 +8,9 @@ DATA_FILE_SCOPES_DIFF=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
 DATA_FILE_SCOPES_DIFF_DOTS=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
 RESULT_FILE=$(mktemp /tmp/sbcg.result.XXXXXXXXXX)
 
+#Paths
+SCRIPT_DIR=$(dirname $0)
+
 #Defaults
 LANG="se"
 TITLE="Burndown"
@@ -206,7 +209,7 @@ calc_actual_days()
 		CURDATE=$(date -d "$START_DATE + $LOOPNR days" +"%Y-%m-%d") 
 		CURYR=$(date -d "$CURDATE" +"%Y")
 		CURWDN=$(date -d "$CURDATE" +"%a")
-		CURHOL=$(cat holidays/${LANG}/${CURYR} | grep $CURDATE)
+		CURHOL=$(cat $SCRIPT_DIR/holidays/${LANG}/${CURYR} | grep $CURDATE)
 		if [ x"$CURWDN" = x"Sat" -o x"$CURWDN" = x"Sun" -o -n "$CURHOL" ]; then
 			COUNTER_HD_WE_tmp=$(expr $COUNTER_HD_WE + 1)
 			COUNTER_HD_WE=$COUNTER_HD_WE_tmp
@@ -272,7 +275,7 @@ generate_data_files()
 		CURDATE=$(date -d "$START_DATE + $d days" +"%Y-%m-%d") 
 		CURYR=$(date -d "$CURDATE" +"%Y")
 		CURWDN=$(date -d "$CURDATE" +"%a")
-		CURHOL=$(cat holidays/${LANG}/${CURYR} | grep $CURDATE)
+		CURHOL=$(cat $SCRIPT_DIR/holidays/${LANG}/${CURYR} | grep $CURDATE)
 		if [ x"$CURWDN" != x"Sat" -a x"$CURWDN" != x"Sun" -a -z "$CURHOL" ]; then
 			LAST_SEQ_WD=$(expr $d + 1)
 		fi
@@ -282,7 +285,7 @@ generate_data_files()
 		CURDATE=$(date -d "$START_DATE + $d days" +"%Y-%m-%d") 
 		CURWDN=$(date -d "$CURDATE" +"%a")
 		CURYR=$(date -d "$CURDATE" +"%Y")
-		CURHOL=$(cat holidays/${LANG}/${CURYR} | grep $CURDATE)
+		CURHOL=$(cat $SCRIPT_DIR/holidays/${LANG}/${CURYR} | grep $CURDATE)
 
 		isholwe="no"
 
