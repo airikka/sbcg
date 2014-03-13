@@ -12,7 +12,8 @@ RESULT_FILE=$(mktemp /tmp/sbcg.result.XXXXXXXXXX)
 SCRIPT_DIR=$(dirname $0)
 
 #Util version
-GNUPLOT_VER=$(gnuplot --version | awk '{print $2}')
+GPLOT_VER=$(gnuplot --version | awk '{print $2}')
+GPLOT_VER_LESS_FUNC="4.4"
 
 #Defaults
 LANG="se"
@@ -162,8 +163,8 @@ generate_gnuplot_config_file()
 	echo "set bmargin 4" >> $CONFIG_FILE
 	echo "set grid xtics ytics" >> $CONFIG_FILE
     
-    #If gnuplot is version 4.4 or higher
-    if [ "$(max $GNUPLOT_VER 4.4)" = "$GNUPLOT_VER" ]; then
+    # set key font is implemented in gnuplot stable version 4.4.0 and higher
+    if [ $(echo "$GPLOT_VER >= $GPLOT_VER_LESS_FUNC" | bc) -eq 1 ]; then
 	    echo "set key font \"Arial,4\" width -25" >> $CONFIG_FILE
     fi
 
