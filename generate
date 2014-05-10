@@ -2,6 +2,8 @@
 
 CONFIG_FILE=$(mktemp /tmp/sbcg.genconf.XXXXXXXXXX)
 DATA_FILE_IDEAL=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
+DATA_FILE_STRETCH=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
+DATA_FILE_STRETCH_HOR=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
 DATA_FILE_ACTUAL=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
 DATA_FILE_SCOPES=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
 DATA_FILE_SCOPES_DIFF=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
@@ -11,7 +13,7 @@ RESULT_FILE=$(mktemp /tmp/sbcg.result.XXXXXXXXXX)
 #Defaults
 LANG="se"
 TITLE="Burndown"
-OUTPUT_TYPE="pdf enhanced"
+OUTPUT_TYPE="pdf enhanced dashed"
 OUTPUT="stdout-chart"
 DAYS=20
 ACTDAYS=0
@@ -27,6 +29,7 @@ SCOPESHOUR=0
 USE_VEL="no"
 VELOCITY=25
 PH="hours"
+STRETCH=0
 
 usage()
 {
@@ -35,7 +38,7 @@ usage()
 
 parse_config()
 {
-	for d in LANG TITLE OUTPUT_TYPE OUTPUT DAYS HOURS START_DATE WITH_HD_WE ACTUAL USE_VEL VELOCITY PH; do
+	for d in LANG TITLE OUTPUT_TYPE OUTPUT DAYS HOURS START_DATE WITH_HD_WE ACTUAL USE_VEL VELOCITY PH STRETCH; do
 		temp=$(cat $CONFIG | grep "^$d=" | sed -e 's/^.*=//' -e 's/\r//')
 		if [ -n "$temp" ]; then
 			eval $d="$temp"
@@ -129,6 +132,12 @@ parse_arguments()
 					shift
 				fi
 				;;
+			"--stretch")	shift
+				if [ ! x"${1:0:2}" = x"--" ]; then
+					STRETCH=$1
+					shift
+				fi
+				;;
 			*) 		usage
 				exit 42
 				;;
@@ -143,6 +152,7 @@ generate_gnuplot_config_file()
 
 	echo "set title \"$TITLE\"" >> $CONFIG_FILE
 	echo "set term $OUTPUT_TYPE" >> $CONFIG_FILE
+	echo "set termoptions dashed" >> $CONFIG_FILE
 	echo "set output \"$RESULT_FILE\"" >> $CONFIG_FILE
 	echo "set timefmt \"%Y-%m-%d\"" >> $CONFIG_FILE
 	echo "set format x \"%Y-%m-%d\"" >> $CONFIG_FILE
@@ -151,6 +161,7 @@ generate_gnuplot_config_file()
 	echo "set bmargin 4" >> $CONFIG_FILE
 	echo "set grid xtics ytics" >> $CONFIG_FILE
 	echo "set key font \"Arial,4\" width -25" >> $CONFIG_FILE
+
 
 	if [ -n "$ACTUAL" ]; then
 
@@ -166,8 +177,15 @@ generate_gnuplot_config_file()
 		done < $DATA_FILE_ACTUAL
 
 		if [ x"$SCOPES" = x"false" ]; then
-			echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Velocity: $DELTA $PH/day)\", \
-				\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual ($DELTA_REM $PH/day remaining)\"" >> $CONFIG_FILE
+			if [ $STRETCH -gt 0 ]; then
+				echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines lc rgb \"red\" title \"Ideal (Vel: $DELTA $PH/day)\", \
+					\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints lt 1 pt 7 ps 0.3 lc rgb \"blue\" title \"Actual ($DELTA_REM $PH/day remaining)\", \
+					\"$DATA_FILE_STRETCH_HOR\" using 2:xticlabels(1) with lines lt -1 notitle, \
+					\"$DATA_FILE_STRETCH\" using 2:xticlabels(1) with lines ls 9 lw 2 lc rgb \"purple\" title \"Stretch ($STRETCH $PH, Vel: $DELTA_STRETCH $PH/day)\"" >> $CONFIG_FILE
+			else
+				echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines lc rgb \"red\" title \"Ideal (Vel: $DELTA $PH/day)\", \
+					\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints lt 1 pt 1 ps 0.1 lc rgb \"blue\" title \"Actual ($DELTA_REM $PH/day remaining)\"" >> $CONFIG_FILE
+			fi
 		else
 			while read d; do
 				dval=$(echo $d | awk '{print $1}')
@@ -185,13 +203,28 @@ generate_gnuplot_config_file()
 				echo "$dval $zval" >> $DATA_FILE_SCOPES_DIFF_DOTS
 			done < $DATA_FILE_SCOPES_DIFF
 
-			echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Velocity: $DELTA $PH/day)\", \
-				\"$DATA_FILE_SCOPES\" using 2:xticlabels(1) with lines title \"Scope in/out ($SCOPESHOUR hours scoped in/out)\", \
-				\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints pt 7 ps 0.3 title \"Actual ($DELTA_REM $PH/day remaining)\", \
-				\"$DATA_FILE_SCOPES_DIFF_DOTS\" using 2:xticlabels(1) with points pt 7 ps 0.4 lc rgb \"green\" notitle" >> $CONFIG_FILE
+			if [ $STRETCH -gt 0 ]; then
+				echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines lc rgb \"red\" title \"Ideal (Vel: $DELTA $PH/day)\", \
+					\"$DATA_FILE_SCOPES\" using 2:xticlabels(1) with lines lt -1 lc rgb \"green\" title \"Scope in/out ($SCOPESHOUR hours scoped in/out)\", \
+					\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints lt 1 pt 7 ps 0.3 lc rgb \"blue\" title \"Actual ($DELTA_REM $PH/day remaining)\", \
+					\"$DATA_FILE_STRETCH\" using 2:xticlabels(1) with lines ls 9 lw 2 lc rgb \"purple\" title \"Stretch ($STRETCH $PH, Vel: $DELTA_STRETCH $PH/day)\", \
+					\"$DATA_FILE_STRETCH_HOR\" using 2:xticlabels(1) with lines lt -1 notitle, \
+					\"$DATA_FILE_SCOPES_DIFF_DOTS\" using 2:xticlabels(1) with points pt 7 ps 0.4 lc rgb \"green\" notitle" >> $CONFIG_FILE
+			else
+				echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines lc rgb \"red\" title \"Ideal (Vel: $DELTA $PH/day)\", \
+					\"$DATA_FILE_SCOPES\" using 2:xticlabels(1) with lines lt -1 lc rgb \"green\" title \"Scope in/out ($SCOPESHOUR hours scoped in/out)\", \
+					\"$DATA_FILE_ACTUAL\" using 2:xticlabels(1) with linespoints lt 1 pt 7 ps 0.3 lc rgb \"blue\" title \"Actual ($DELTA_REM $PH/day remaining)\", \
+					\"$DATA_FILE_SCOPES_DIFF_DOTS\" using 2:xticlabels(1) with points pt 7 ps 0.4 lc rgb \"green\" notitle" >> $CONFIG_FILE
+			fi
 		fi
 	else
-		echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines title \"Ideal (Velocity: $DELTA $PH/day)\"" >> $CONFIG_FILE
+		if [ $STRETCH -gt 0 ]; then
+			echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines lc rgb \"red\" title \"Ideal (Vel: $DELTA $PH/day)\", \
+				\"$DATA_FILE_STRETCH\" using 2:xticlabels(1) with lines ls 9 lw 2 lc rgb \"purple\" title \"Stretch ($STRETCH $PH, Vel: $DELTA_STRETCH $PH/day)\", \
+				\"$DATA_FILE_STRETCH_HOR\" using 2:xticlabels(1) with lines lt -1 notitle" >> $CONFIG_FILE
+		else
+			echo "plot \"$DATA_FILE_IDEAL\" using 2:xticlabels(1) with lines lc rgb \"red\" title \"Ideal (Vel: $DELTA $PH/day)\"" >> $CONFIG_FILE
+		fi
 	fi
 
 }
@@ -262,7 +295,9 @@ generate_data_files()
 	d_plus_one=0
 	weekdays_plus_one=0
 	CURHOUR=$HOURS
-	DELTA=$(echo "scale=1; $HOURS / $DAYS" | bc)
+	CURHOUR_STRETCH=$HOURS
+	DELTA=$(echo "scale=1; ($HOURS - $STRETCH) / $DAYS" | bc)
+	DELTA_STRETCH=$(echo "scale=1; ($HOURS) / $DAYS" | bc)
 	ACT_DAYS_REMAINING=0
 	LAST_ACTUAL=0
 	LAST_SEQ_WD=0
@@ -298,6 +333,8 @@ generate_data_files()
 				d_plus_one_tmp=$(expr $d_plus_one + 1)
 				d_plus_one=$d_plus_one_tmp
 				echo $CURDATE $CURHOUR >> $DATA_FILE_IDEAL
+				echo $CURDATE $CURHOUR_STRETCH >> $DATA_FILE_STRETCH
+				echo $CURDATE $STRETCH >> $DATA_FILE_STRETCH_HOR
 				add_subtr_scopes_hours $(echo $ACTUAL | awk "{print \$$d_plus_one}")
 				actual=$(strip_scopes $(echo $ACTUAL | awk "{print \$$d_plus_one}"))
 				curhour=$(echo "scale=2; $CURHOUR + $SCOPESHOUR" | bc) 
@@ -316,6 +353,8 @@ generate_data_files()
 			weekdays_plus_one=$weekdays_plus_one_tmp
 
 			echo $CURDATE $CURHOUR >> $DATA_FILE_IDEAL
+			echo $CURDATE $CURHOUR_STRETCH >> $DATA_FILE_STRETCH
+			echo $CURDATE $STRETCH >> $DATA_FILE_STRETCH_HOR
 			add_subtr_scopes_hours $(echo $ACTUAL | awk "{print \$$d_plus_one}")
 			actual=$(strip_scopes $(echo $ACTUAL | awk "{print \$$d_plus_one}"))
 			curhour=$(echo "scale=2; $CURHOUR + $SCOPESHOUR" | bc) 
@@ -328,6 +367,7 @@ generate_data_files()
 			fi
 
 			CURHOUR=$(echo "scale=2; $HOURS - ($weekdays_plus_one * $DELTA)" | bc) 
+			CURHOUR_STRETCH=$(echo "scale=2; $HOURS - ($weekdays_plus_one * $DELTA_STRETCH)" | bc) 
 
 			if [ x"$actual" = x"" ]; then
 				ACT_DAYS_REMAINING_tmp=$(expr $ACT_DAYS_REMAINING + 1)
@@ -341,14 +381,14 @@ generate_data_files()
 	done
 
 	if [ -n "$ACTUAL" ]; then
-		DELTA_REM=$(echo "scale=1; ($LAST_ACTUAL / $ACT_DAYS_REMAINING) - ($SCOPESHOUR / $ACT_DAYS_REMAINING)" | bc)
+		DELTA_REM=$(echo "scale=1; ($LAST_ACTUAL / $ACT_DAYS_REMAINING) - ($SCOPESHOUR / $ACT_DAYS_REMAINING) - ($STRETCH / $ACT_DAYS_REMAINING)" | bc)
 	fi
 
 }
 
 cleanup()
 {
-	rm $CONFIG_FILE $DATA_FILE_IDEAL $DATA_FILE_ACTUAL $DATA_FILE_SCOPES $DATA_FILE_SCOPES_DIFF $DATA_FILE_SCOPES_DIFF_DOTS $RESULT_FILE
+	rm $CONFIG_FILE $DATA_FILE_IDEAL $DATA_FILE_STRETCH $DATA_FILE_STRETCH_HOR $DATA_FILE_ACTUAL $DATA_FILE_SCOPES $DATA_FILE_SCOPES_DIFF $DATA_FILE_SCOPES_DIFF_DOTS $RESULT_FILE
 }
 
 generate_config()
@@ -365,6 +405,7 @@ generate_config()
 	echo -ne "USE_VEL=\"$USE_VEL\"\r\n" >> $RESULT_FILE
 	echo -ne "VELOCITY=\"$VELOCITY\"\r\n" >> $RESULT_FILE
 	echo -ne "PH=\"$PH\"\r\n" >> $RESULT_FILE
+	echo -ne "STRETCH=\"$STRETCH\"\r\n" >> $RESULT_FILE
 	if [ -n "$ACTUAL" ]; then
 		echo -ne "ACTUAL=\"$ACTUAL\"\r\n" >> $RESULT_FILE
 	else
