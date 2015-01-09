@@ -10,6 +10,13 @@ DATA_FILE_SCOPES_DIFF=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
 DATA_FILE_SCOPES_DIFF_DOTS=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
 RESULT_FILE=$(mktemp /tmp/sbcg.result.XXXXXXXXXX)
 
+#Paths
+SCRIPT_DIR=$(dirname $0)
+
+#Util version
+GPLOT_VER=$(gnuplot --version | awk '{print $2}')
+GPLOT_VER_LESS_FUNC="4.4"
+
 #Defaults
 LANG="se"
 TITLE="Burndown"
@@ -145,6 +152,11 @@ parse_arguments()
 	done
 }
 
+max()
+{
+    echo -e "$1\n$2" | sort -rV | head -n1
+}
+
 
 generate_gnuplot_config_file()
 {
@@ -160,7 +172,11 @@ generate_gnuplot_config_file()
 	echo "set rmargin 6" >> $CONFIG_FILE
 	echo "set bmargin 4" >> $CONFIG_FILE
 	echo "set grid xtics ytics" >> $CONFIG_FILE
-	echo "set key font \"Arial,4\" width -25" >> $CONFIG_FILE
+    
+    # set key font is implemented in gnuplot stable version 4.4.0 and higher
+    if [ $(echo "$GPLOT_VER >= $GPLOT_VER_LESS_FUNC" | bc) -eq 1 ]; then
+	    echo "set key font \"Arial,4\" width -25" >> $CONFIG_FILE
+    fi
 
 
 	if [ -n "$ACTUAL" ]; then
@@ -239,7 +255,7 @@ calc_actual_days()
 		CURDATE=$(date -d "$START_DATE + $LOOPNR days" +"%Y-%m-%d") 
 		CURYR=$(date -d "$CURDATE" +"%Y")
 		CURWDN=$(date -d "$CURDATE" +"%a")
-		CURHOL=$(cat holidays/${LANG}/${CURYR} | grep $CURDATE)
+		CURHOL=$(cat $SCRIPT_DIR/holidays/${LANG}/${CURYR} | grep $CURDATE)
 		if [ x"$CURWDN" = x"Sat" -o x"$CURWDN" = x"Sun" -o -n "$CURHOL" ]; then
 			COUNTER_HD_WE_tmp=$(expr $COUNTER_HD_WE + 1)
 			COUNTER_HD_WE=$COUNTER_HD_WE_tmp
@@ -307,7 +323,7 @@ generate_data_files()
 		CURDATE=$(date -d "$START_DATE + $d days" +"%Y-%m-%d") 
 		CURYR=$(date -d "$CURDATE" +"%Y")
 		CURWDN=$(date -d "$CURDATE" +"%a")
-		CURHOL=$(cat holidays/${LANG}/${CURYR} | grep $CURDATE)
+		CURHOL=$(cat $SCRIPT_DIR/holidays/${LANG}/${CURYR} | grep $CURDATE)
 		if [ x"$CURWDN" != x"Sat" -a x"$CURWDN" != x"Sun" -a -z "$CURHOL" ]; then
 			LAST_SEQ_WD=$(expr $d + 1)
 		fi
@@ -317,7 +333,7 @@ generate_data_files()
 		CURDATE=$(date -d "$START_DATE + $d days" +"%Y-%m-%d") 
 		CURWDN=$(date -d "$CURDATE" +"%a")
 		CURYR=$(date -d "$CURDATE" +"%Y")
-		CURHOL=$(cat holidays/${LANG}/${CURYR} | grep $CURDATE)
+		CURHOL=$(cat $SCRIPT_DIR/holidays/${LANG}/${CURYR} | grep $CURDATE)
 
 		isholwe="no"
 
