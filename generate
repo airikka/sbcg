@@ -20,6 +20,7 @@ ACTDAYS=0
 HOURS=500
 START_DATE="2013-01-01"
 WITH_HD_WE="yes"
+HD_IGNORE=""
 VACATION=""
 ACTUAL=""
 CONFIG=""
@@ -39,7 +40,7 @@ usage()
 
 parse_config()
 {
-	for d in LANG TITLE OUTPUT_TYPE OUTPUT DAYS HOURS START_DATE WITH_HD_WE VACATION ACTUAL USE_VEL VELOCITY PH STRETCH; do
+	for d in LANG TITLE OUTPUT_TYPE OUTPUT DAYS HOURS START_DATE WITH_HD_WE HD_IGNORE VACATION ACTUAL USE_VEL VELOCITY PH STRETCH; do
 		temp=$(cat $CONFIG | grep "^$d=" | sed -e 's/^.*=//' -e 's/\r//')
 		if [ -n "$temp" ]; then
 			eval $d="$temp"
@@ -241,6 +242,9 @@ calc_actual_days()
 		CURYR=$(date -d "$CURDATE" +"%Y")
 		CURWDN=$(date -d "$CURDATE" +"%a")
 		CURHOL=$(echo $VACATION $(cat holidays/${LANG}/${CURYR}) | grep $CURDATE)
+		if [ -n "$(echo $HD_IGNORE | grep $CURDATE)" ]; then
+			CURHOL=""
+		fi
 		if [ x"$CURWDN" = x"Sat" -o x"$CURWDN" = x"Sun" -o -n "$CURHOL" ]; then
 			COUNTER_HD_WE_tmp=$(expr $COUNTER_HD_WE + 1)
 			COUNTER_HD_WE=$COUNTER_HD_WE_tmp
@@ -309,6 +313,9 @@ generate_data_files()
 		CURYR=$(date -d "$CURDATE" +"%Y")
 		CURWDN=$(date -d "$CURDATE" +"%a")
 		CURHOL=$(echo $VACATION $(cat holidays/${LANG}/${CURYR}) | grep $CURDATE)
+		if [ -n "$(echo $HD_IGNORE | grep $CURDATE)" ]; then
+			CURHOL=""
+		fi
 		if [ x"$CURWDN" != x"Sat" -a x"$CURWDN" != x"Sun" -a -z "$CURHOL" ]; then
 			LAST_SEQ_WD=$(expr $d + 1)
 		fi
@@ -319,6 +326,9 @@ generate_data_files()
 		CURWDN=$(date -d "$CURDATE" +"%a")
 		CURYR=$(date -d "$CURDATE" +"%Y")
 		CURHOL=$(echo $VACATION $(cat holidays/${LANG}/${CURYR}) | grep $CURDATE)
+		if [ -n "$(echo $HD_IGNORE | grep $CURDATE)" ]; then
+			CURHOL=""
+		fi
 
 		isholwe="no"
 
@@ -403,6 +413,8 @@ generate_config()
 	echo -ne "HOURS=\"$HOURS\"\r\n" >> $RESULT_FILE
 	echo -ne "START_DATE=\"$START_DATE\"\r\n" >> $RESULT_FILE
 	echo -ne "WITH_HD_WE=\"$WITH_HD_WE\"\r\n" >> $RESULT_FILE
+	echo -ne "#HD_IGNORE is a space separated list of holidays to be ignored as holidays. Format yyyy-mm-dd.\r\n" >> $RESULT_FILE
+	echo -ne "HD_IGNORE=\"$HD_IGNORE\"\r\n" >> $RESULT_FILE
 	echo -ne "#VACATION is a space separated list of vacation days to be added in the format yyyy-mm-dd.\r\n" >> $RESULT_FILE
 	echo -ne "VACATION=\"$VACATION\"\r\n" >> $RESULT_FILE
 	echo -ne "USE_VEL=\"$USE_VEL\"\r\n" >> $RESULT_FILE
