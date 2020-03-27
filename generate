@@ -158,7 +158,11 @@ generate_gnuplot_config_file()
 	echo "set output \"$RESULT_FILE\"" >> $CONFIG_FILE
 	echo "set timefmt \"%Y-%m-%d\"" >> $CONFIG_FILE
 	echo "set format x \"%Y-%m-%d\"" >> $CONFIG_FILE
-	echo "set xtics rotate by -45 scale 0 font \"Arial,8\"" >> $CONFIG_FILE
+	local xtics_size=8
+	if [ ${DAYS} -gt 30 ]; then
+		xtics_size=6
+	fi
+	echo "set xtics rotate by -45 scale 0 font \"Arial,${xtics_size}\"" >> $CONFIG_FILE
 	echo "set rmargin 6" >> $CONFIG_FILE
 	echo "set bmargin 4" >> $CONFIG_FILE
 	echo "set grid xtics ytics" >> $CONFIG_FILE
