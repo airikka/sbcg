@@ -1,13 +1,13 @@
 #!/bin/bash
 
 CONFIG_FILE=$(mktemp /tmp/sbcg.genconf.XXXXXXXXXX)
-DATA_FILE_IDEAL=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
-DATA_FILE_STRETCH=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
-DATA_FILE_STRETCH_HOR=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
-DATA_FILE_ACTUAL=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
-DATA_FILE_SCOPES=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
-DATA_FILE_SCOPES_DIFF=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
-DATA_FILE_SCOPES_DIFF_DOTS=$(mktemp /tmp/sbcg.datafile.XXXXXXXXXX)
+DATA_FILE_IDEAL=$(mktemp /tmp/sbcg.datafile.ideal.XXXXXXXXXX)
+DATA_FILE_STRETCH=$(mktemp /tmp/sbcg.datafile.stretch.XXXXXXXXXX)
+DATA_FILE_STRETCH_HOR=$(mktemp /tmp/sbcg.datafile.stretch_hor.XXXXXXXXXX)
+DATA_FILE_ACTUAL=$(mktemp /tmp/sbcg.datafile.actual.XXXXXXXXXX)
+DATA_FILE_SCOPES=$(mktemp /tmp/sbcg.datafile.scopes.XXXXXXXXXX)
+DATA_FILE_SCOPES_DIFF=$(mktemp /tmp/sbcg.datafile.scopes_diff.XXXXXXXXXX)
+DATA_FILE_SCOPES_DIFF_DOTS=$(mktemp /tmp/sbcg.datafile.scopes_diff_dots.XXXXXXXXXX)
 RESULT_FILE=$(mktemp /tmp/sbcg.result.XXXXXXXXXX)
 
 #Defaults
@@ -172,15 +172,41 @@ generate_gnuplot_config_file()
 	if [ -n "$ACTUAL" ]; then
 
 		linecounter=0
+		last_xval=""
+		last_ideal_yval=""
+		last_actual_yval=""
+		last_linecounter=0
 		while read d; do
 			xval=$(echo $d | awk '{print $1}')
 			yval=$(echo $d | awk '{print $2}')
+
 			if [ -n "$yval" -a -n "$xval" ]; then
-				echo "set label\"$yval\" at $linecounter,$yval rotate by 90 font \"Arial,6\" left front offset 0.5" >> $CONFIG_FILE
+
+				ideal_yval=$(cat $DATA_FILE_IDEAL | grep $xval | awk '{print $2}')
+				bc_comp_res=$(echo "$yval >= $ideal_yval" | bc -l)
+				rotate="90"
+				if [ "$bc_comp_res" -eq 0 ]; then
+					rotate="-90"
+				fi
+
+				echo "set label\"$yval\" at $linecounter,$yval rotate by $rotate font \"Arial,6\" left front offset 0.5" >> $CONFIG_FILE
+				last_xval=$xval
+				last_ideal_yval=$ideal_yval
+				last_actual_yval=$yval
+				last_linecounter=$linecounter
 				linecounter_tmp=$(expr $linecounter + 1)
 				linecounter=$linecounter_tmp
 			fi
 		done < $DATA_FILE_ACTUAL
+
+		if [ -n "$last_xval" -a -n "$last_ideal_yval" -a -n "$last_actual_yval" ]; then
+			bc_comp_res=$(echo "$last_actual_yval >= $last_ideal_yval" | bc -l)
+			rotate="-90"
+			if [ "$bc_comp_res" -eq 0 ]; then
+				rotate="90"
+			fi
+			echo "set label\"$last_ideal_yval\" at $last_linecounter,$last_ideal_yval rotate by $rotate font \"Arial,6\" tc rgb \"red\" left front offset 0.5" >> $CONFIG_FILE
+		fi
 
 		if [ x"$SCOPES" = x"false" ]; then
 			if [ $STRETCH -gt 0 ]; then
